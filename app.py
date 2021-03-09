@@ -7,9 +7,7 @@ app = Flask(__name__)
 import db
 from db import *
 api = Api(app)
-
 bcrypt = Bcrypt(app)
-
 
 
 @app.route('/')
@@ -30,14 +28,12 @@ def test():
 @app.route('/user/<string:user>/<string:roll>/<string:age>',methods=["POST"])
 def user(user,roll,age):
     username=user
-    user=user_collection.insert_one({"name": username,"rollNo.":roll,"age":age})  
+    user_collection.insert_one({"name": username,"rollNo.":roll,"age":age}).inserted_id
     return jsonify({
-        "user": user
+        "message": 'data entered into database'
     })
-
-    
     
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True,port=3000,host='0.0.0.0')
 
