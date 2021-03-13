@@ -40,10 +40,10 @@ def test():
         result_comparion = result 
     )
 
-@app.route('/user/<string:user>/<string:roll>/<string:age>',methods=["POST"])
-def user(user,roll,age):
-    username=user
-    user_collection.insert_one({"name": username,"rollNo":roll,"age":age})
+@app.route('/user/<string:email>/<string:password>/<string:name>',methods=["POST"])
+def user(email,password,name):
+    hashed_pass = bcrypt.generate_password_hash(password)
+    user_collection.insert_one({"email": email,"password":hashed_pass,"name":name})
     return jsonify({
         "message": 'data entered into database'
     })
@@ -65,13 +65,19 @@ def login():
     dict_str = data.decode("UTF-8")
     resData = ast.literal_eval(dict_str)
     
-    #username = resData["user"]
-    regNo = resData["rollNo"]
-    userName = resData["name"]
+    password = resData["password"]
+    userName = resData["email"]
 
-    result = (user_collection.find_one({"name" : userName}))
+    userAcc = (user_collection.find_one({"email" : userName}))
+    
+    if not userAcc:
+        return jsonify("Account doesn't exist")
+    result = bcrypt.check_password_hash(userAcc["password"],password)
 
-    return jsonify(str(result))
+    if result:
+        return jsonify("You have been successfully logged in!")
+    else:
+        return jsonify("Login Failed!")    
 
 
 
