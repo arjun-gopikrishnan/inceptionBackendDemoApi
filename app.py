@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 app = Flask(__name__)
-app.config.from_envvar('APP_SETTINGS')
+# app.config.from_envvar('APP_SETTINGS')
 
 import db
 from db import *
