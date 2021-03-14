@@ -3,20 +3,25 @@ from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_restful import Resource, Api
 from flask import request
-from flask import jsonify
+from flask import jsonify,make_response
 import json
 import ast
+import jwt
 
+from datetime import datetime, timedelta 
 
-# from mongoengine import MongoEngineJSONEncoder
-# from mongoengine.base import BaseDocument
+from functools import wraps
+
 app = Flask(__name__)
-# app.json_encoder = MongoEngineJSONEncoder
+app.config.from_envvar('APP_SETTINGS')
+
 import db
 from db import *
 api = Api(app)
 bcrypt = Bcrypt(app)
 from bson import ObjectId
+
+app.config['SECRET_KEY'] = 'usersJWTsecretkEy'
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -26,7 +31,27 @@ class JSONEncoder(json.JSONEncoder):
 
 @app.route('/')
 def hello():
-    return "Welcome to inception 5.0"
+    return 'Welcome to inception 5.0'
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+        if not token:
+            return jsonify({'message' : 'Token is missing !!'}),401
+        
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'])
+            current_user = user_collection.find_one({"email" :  data["public_id"]})
+        except:
+            return jsonify({ 
+                'message' : 'Token is invalid !!'
+            }), 401 
+        return  f(current_user, *args, **kwargs) 
+   
+    return decorated 
 
 @app.route('/test',methods=["POST"])
 def test():
@@ -49,13 +74,16 @@ def user(email,password,name):
     })
 
 @app.route('/return',methods=["GET"])
-def getAll():    
-    res = {}
+@token_required
+def getAll(current_user):    
     for x in user_collection.find():              
       var = JSONEncoder().encode(str(x))
-      print((var))
+      #print((var))
 
-    print('Last value of var',var)
+    # token = request.headers['x-access-token']
+    # data = jwt.decode(token, app.config['SECRET_KEY'])
+    # current_user = user_collection.find_one({"email" :  data["public_id"]})
+    
 
     return jsonify(var)
 
@@ -75,9 +103,17 @@ def login():
     result = bcrypt.check_password_hash(userAcc["password"],password)
 
     if result:
-        return jsonify("You have been successfully logged in!")
+        token = jwt.encode({
+            'public_id' : userAcc["email"],
+            'exp' : datetime.utcnow() + timedelta(minutes = 30)
+        }, app.config['SECRET_KEY'])
+        return make_response(jsonify({'token' : token.decode('UTF-8')}), 201)
     else:
-        return jsonify("Login Failed!")    
+        return make_response( 
+        'Could not verify', 
+        403, 
+        {'WWW-Authenticate' : 'Basic realm ="Wrong Password !!"'} 
+    ) 
 
 
 
