@@ -20,8 +20,10 @@ from db import *
 api = Api(app)
 bcrypt = Bcrypt(app)
 from bson import ObjectId
-
-app.config['SECRET_KEY'] = 'usersJWTsecretkEy'
+import os
+from dotenv import load_dotenv
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -31,6 +33,7 @@ class JSONEncoder(json.JSONEncoder):
 
 @app.route('/')
 def hello():
+    print(SECRET_KEY)
     return 'Welcome to inception 5.0'
 
 def token_required(f):
@@ -43,7 +46,7 @@ def token_required(f):
             return jsonify({'message' : 'Token is missing !!'}),401
         
         try:
-            data = jwt.decode(token, app.config['SECRET_KEY'])
+            data = jwt.decode(token, SECRET_KEY)
             current_user = user_collection.find_one({"email" :  data["public_id"]})
         except:
             return jsonify({ 
@@ -106,7 +109,7 @@ def login():
         token = jwt.encode({
             'public_id' : userAcc["email"],
             'exp' : datetime.utcnow() + timedelta(minutes = 30)
-        }, app.config['SECRET_KEY'])
+        }, SECRET_KEY)
         return make_response(jsonify({'token' : token.decode('UTF-8')}), 201)
     else:
         return make_response( 
