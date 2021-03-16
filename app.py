@@ -1,4 +1,3 @@
-
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_restful import Resource, Api
@@ -31,10 +30,7 @@ class JSONEncoder(json.JSONEncoder):
             return str(o)
         return json.JSONEncoder.default(self, o)
 
-@app.route('/')
-def hello():
-    print(SECRET_KEY)
-    return 'Welcome to inception 5.0'
+
 
 def token_required(f):
     @wraps(f)
@@ -55,6 +51,11 @@ def token_required(f):
         return  f(current_user, *args, **kwargs) 
    
     return decorated 
+
+@app.route('/')
+@token_required
+def hello(current_user):
+    return 'Welcome to inception 5.0'
 
 @app.route('/test',methods=["POST"])
 def test():
